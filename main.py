@@ -8,9 +8,9 @@ import datetime
 import _sqlite3
 
 
-# DATABASE_LOCATION = "sqllite:///my_played_tracks.sqlite"
+DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
 USER_ID = "deus.caj"
-TOKEN ="BQBo1izsaYO8ZZqIUbEKJ-wo7PWdFqKWY2wAteVMSKexbCApeBcS31A7YtbRIVmBi4Qi1SzXY4OhoW0Ytp48foHWRXB-nbcn0cnolh60q57uFzSVsqWIr1dPZNobMxya84yVhdyaLjeYp_3N"
+TOKEN ="BQD9zvgKW8jKNQiNDGqMTsEEKv_OBwZkBfYk7d3Ax92H5Pzbot67wfLsQ7wL12-zQgTaweK-upKQNh2bNNiTidMcMBh-kZUWhcD_WXmTcwLIQBDGDHk7XaKFe1bXOGpEYOAPksg_VsqYGrE4"
 
 
 def check_if_valid_data(df:pd.DataFrame) -> bool:
@@ -24,19 +24,21 @@ def check_if_valid_data(df:pd.DataFrame) -> bool:
             raise Exception("Primary Key check is violated") 
         if df.isnull().values.any():
             raise Exception("Null Values found")   
-        yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
-        yesterday = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
+
+#Validate data only within 24 hours
+        # yesterday = datetime.datetime.now() - datetime.timedelta(days=30)
+        # yesterday = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-        timestamps  = df["timestamp"].tolist() #toList convert data frame series ke list
-        for timestamp in timestamps:
-            if datetime.datetime.strptime(timestamp,"%Y-%m-%d") != yesterday:
-                raise Exception ("There are at least one data that not come within 24 hours")
+        # timestamps  = df["timestamp"].tolist() #toList convert data frame series ke list
+        # for timestamp in timestamps:
+        #     if datetime.datetime.strptime(timestamp,"%Y-%m-%d") != yesterday:
+        #         raise Exception ("There are at least one data that not come within 24 hours")
        
        
-        
-                
-        return True
+        # return True
+
+
 if __name__ == "__main__":
     headers = {
         "Accept": "application/json",
@@ -78,5 +80,26 @@ song_df = pd.DataFrame(song_dict, columns= ["song_name","artist_name","played_at
 if check_if_valid_data(song_df):
     print("Data valid,proceed to Load ")
 
-print(song_df)  
+#Load
+engine = sqlalchemy.create_engine(DATABASE_LOCATION)
+conn = _sqlite3.connect('my_played_tracks.sqlite')
+cursor = conn.cursor()
 
+
+sql_query = """
+CREATE TABLE IF NOT EXISTS my_played_tracks(
+    song_name VARCHAR(200),
+    artist_name VARCHAR(200),
+    played_at VARCHAR (200),
+    timestamp VARCHAR(200),
+    CONSTRAINT primary_key_constraint PRIMARY KEY (played_at)
+)
+"""
+
+cursor.execute(sql_query)
+print("Database Opened succesfully")
+
+try:
+    song_df.to_sql("my_played_tracks",engine, index = False, if_exists='append')
+except : 
+    print("Data already in table")
